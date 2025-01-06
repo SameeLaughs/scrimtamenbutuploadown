@@ -5,6 +5,7 @@ function parseAndStartGame() {
 
     if (parsedQuestions.length === 0) {
         alert("No questions were found in the packet.");
+        console.log("Parsing result: ", parsedQuestions);
         return;
     }
 
@@ -22,51 +23,36 @@ function parseAndStartGame() {
 
 // Function to parse the packet into questions and answers
 function parsePacket(packetText) {
-    const tossupMarker = /Tossup:/g;
-    const bonusMarker = /Bonus:/g;
+    const questionPattern = /\d+\.(.*?)\n([A-Z\s]+)/g; // Match question number, question, and answer
+    const bonusPattern = /B\d+\.(.*?)\n([A-Z\s]+)/g; // Match bonus number, bonus question, and bonus answer
 
-    // Split the packet by tossup and bonus markers
     let questions = [];
-    let tossupStartIndex = 0;
-    let bonusStartIndex = 0;
+    let tossupMatch;
+    let bonusMatch;
 
-    const tossupQuestions = packetText.split(tossupMarker).slice(1); // Skip the first empty split before the first tossup
-
-    tossupQuestions.forEach((tossup, index) => {
-        // Parse the tossup question and its answer
-        const bonusStart = tossup.indexOf(bonusMarker);
-        const tossupText = tossup.slice(0, bonusStart === -1 ? tossup.length : bonusStart).trim();
-        const answer = extractAnswer(tossupText);
-
-        // Store the parsed question and answer
+    // Parsing tossup questions
+    while ((tossupMatch = questionPattern.exec(packetText)) !== null) {
+        const tossupQuestion = tossupMatch[1].trim();
+        const tossupAnswer = tossupMatch[2].trim();
         questions.push({
             type: 'Tossup',
-            questionText: tossupText,
-            answer: answer
+            questionText: tossupQuestion,
+            answer: tossupAnswer
         });
+    }
 
-        // If a bonus exists after the tossup
-        if (bonusStart !== -1) {
-            const bonusText = tossup.slice(bonusStart + bonusMarker.length).trim();
-            const bonusAnswer = extractAnswer(bonusText);
-
-            // Store the bonus question and answer
-            questions.push({
-                type: 'Bonus',
-                questionText: bonusText,
-                answer: bonusAnswer
-            });
-        }
-    });
+    // Parsing bonus questions
+    while ((bonusMatch = bonusPattern.exec(packetText)) !== null) {
+        const bonusQuestion = bonusMatch[1].trim();
+        const bonusAnswer = bonusMatch[2].trim();
+        questions.push({
+            type: 'Bonus',
+            questionText: bonusQuestion,
+            answer: bonusAnswer
+        });
+    }
 
     return questions;
-}
-
-// Function to extract answers from the question
-function extractAnswer(questionText) {
-    const answerPattern = /\(.*?\)/; // Match the answer inside parentheses
-    const match = questionText.match(answerPattern);
-    return match ? match[0].slice(1, -1) : "No answer found";
 }
 
 // Function to show the next question
