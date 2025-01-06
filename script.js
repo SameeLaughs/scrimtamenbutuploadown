@@ -21,10 +21,10 @@ function parseAndStartGame() {
     showNextQuestion();
 }
 
-// Function to parse the packet into questions and answers
 function parsePacket(packetText) {
-    const questionPattern = /(\d+)\.\s*(.*?)(?:\s*([A-Z\s]+))$/g; // Match question number, question, and answer
-    const bonusPattern = /B(\d+)\.\s*(.*?)(?:\s*([A-Z\s]+))$/g; // Match bonus number, bonus question, and answer
+    // Updated regular expression for matching questions and answers
+    const questionPattern = /(\d+)\.\s*(.*?)(?:\s*([A-Z\s/]+))$/g; // Match question number, question, and answer
+    const bonusPattern = /B(\d+):\s*(.*?)(?:\s*([A-Z\s/]+))$/g; // Match bonus question number, bonus question, and answer
 
     let questions = [];
     let tossupMatch;
@@ -54,6 +54,7 @@ function parsePacket(packetText) {
 
     return questions;
 }
+
 
 // Function to show the next question
 function showNextQuestion() {
