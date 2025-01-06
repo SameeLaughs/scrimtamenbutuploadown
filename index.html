@@ -9,13 +9,16 @@
 <body>
 
 <div id="container">
+    <!-- Question Input Section -->
     <div id="question-container">
         <h2>Paste your question packet here:</h2>
         <textarea id="packet-input" rows="10" cols="50"></textarea><br>
         <button onclick="parseAndStartGame()" class="button">Start Game</button>
     </div>
 
+    <!-- Game Section -->
     <div id="game-container" class="hidden">
+        <!-- Question Display -->
         <div id="question-box">
             <div class="question-header">
                 <h2 id="question-display"></h2>
@@ -24,6 +27,8 @@
                 <button id="buzz-button" onclick="buzzIn()" class="buzz-button hidden">Buzz In</button>
             </div>
         </div>
+        
+        <!-- Answer Display -->
         <div id="answer-display"></div>
     </div>
 </div>
