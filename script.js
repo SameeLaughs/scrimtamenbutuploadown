@@ -1,163 +1,93 @@
-let questions = [];
-let selectedCategories = [];
-let currentQuestionIndex = -1;
-let score = 0;
-let intervalId, timerId;
-let currentWordIndex = 0;
-let timeLeft = 30;
-let buzzedWord = "";
-let buzzedTimeLeft = 30;
+// Function to parse the packet and start the game
+function parseAndStartGame() {
+    const packet = document.getElementById("packet-input").value;
+    const parsedQuestions = parsePacket(packet);
 
-async function loadQuestions() {
-    try {
-        const response = await fetch('questions.json');
-        const allQuestions = await response.json();
-        questions = allQuestions.filter(q => selectedCategories.includes(q.category));
-        
-        if (questions.length === 0) {
-            alert("No questions available for the selected categories.");
-            document.getElementById("categorySelection").style.display = "flex";
-            document.getElementById("gameContainer").style.display = "none";
-            return;
-        }
-        startQuestion();
-    } catch (error) {
-        console.error("Error loading questions:", error);
-        document.getElementById("question").innerText = "There was an issue loading the questions.";
-    }
-}
-
-function startGame() {
-    selectedCategories = [];
-    document.getElementById("myth").checked && selectedCategories.push("Myth");
-    document.getElementById("language").checked && selectedCategories.push("Language");
-    document.getElementById("literature").checked && selectedCategories.push("Literature");
-    document.getElementById("history").checked && selectedCategories.push("History");
-
-    if (selectedCategories.length === 0) {
-        alert("Please select at least one category.");
+    if (parsedQuestions.length === 0) {
+        alert("No questions were found in the packet.");
         return;
     }
 
-    document.getElementById("categorySelection").style.display = "none";
-    document.getElementById("gameContainer").style.display = "flex";
-    loadQuestions();
+    // Store parsed questions in the game
+    window.questions = parsedQuestions;
+    window.currentQuestionIndex = 0;
+
+    // Hide the input area and show the game area
+    document.getElementById("question-container").classList.add("hidden");
+    document.getElementById("game-container").classList.remove("hidden");
+
+    // Start showing the first question
+    showNextQuestion();
 }
 
-function startQuestion() {
-    resetTimer();
-    let newQuestionIndex;
-    do {
-        newQuestionIndex = Math.floor(Math.random() * questions.length);
-    } while (newQuestionIndex === currentQuestionIndex);
+// Function to parse the packet into questions and answers
+function parsePacket(packetText) {
+    const tossupMarker = /Tossup:/g;
+    const bonusMarker = /Bonus:/g;
 
-    currentQuestionIndex = newQuestionIndex;
-    currentWordIndex = 0;
-    document.getElementById("question").innerText = "";  
-    document.getElementById("answerInput");
-    document.getElementById("submitAnswer");
-    document.getElementById("buzzButton").disabled = false;
-    buzzedWord = "";
-    buzzedTimeLeft = 30;
-    clearInterval(intervalId);
-    intervalId = setInterval(revealNextWord, 300);
-    timerId = setInterval(countDown, 1000);
+    // Split the packet by tossup and bonus markers
+    let questions = [];
+    let tossupStartIndex = 0;
+    let bonusStartIndex = 0;
+
+    const tossupQuestions = packetText.split(tossupMarker).slice(1); // Skip the first empty split before the first tossup
+
+    tossupQuestions.forEach((tossup, index) => {
+        // Parse the tossup question and its answer
+        const bonusStart = tossup.indexOf(bonusMarker);
+        const tossupText = tossup.slice(0, bonusStart === -1 ? tossup.length : bonusStart).trim();
+        const answer = extractAnswer(tossupText);
+
+        // Store the parsed question and answer
+        questions.push({
+            type: 'Tossup',
+            questionText: tossupText,
+            answer: answer
+        });
+
+        // If a bonus exists after the tossup
+        if (bonusStart !== -1) {
+            const bonusText = tossup.slice(bonusStart + bonusMarker.length).trim();
+            const bonusAnswer = extractAnswer(bonusText);
+
+            // Store the bonus question and answer
+            questions.push({
+                type: 'Bonus',
+                questionText: bonusText,
+                answer: bonusAnswer
+            });
+        }
+    });
+
+    return questions;
 }
 
-function revealNextWord() {
-    const words = questions[currentQuestionIndex].question.split(' ');
-    if (currentWordIndex < words.length) {
-        document.getElementById("question").innerText += ' ' + words[currentWordIndex];
-        currentWordIndex++;
-    } else {
-        clearInterval(intervalId);
+// Function to extract answers from the question
+function extractAnswer(questionText) {
+    const answerPattern = /\(.*?\)/; // Match the answer inside parentheses
+    const match = questionText.match(answerPattern);
+    return match ? match[0].slice(1, -1) : "No answer found";
+}
+
+// Function to show the next question
+function showNextQuestion() {
+    const currentQuestion = window.questions[window.currentQuestionIndex];
+    if (!currentQuestion) {
+        alert("No more questions available!");
+        return;
     }
+
+    document.getElementById("question-display").innerText = currentQuestion.questionText;
+    document.getElementById("buzz-button").classList.remove("hidden");
 }
 
-document.getElementById("buzzButton").onclick = function() {
-    clearInterval(intervalId);
-    clearInterval(timerId);
-    buzzedWord = questions[currentQuestionIndex].question.split(' ')[currentWordIndex - 1];
-    buzzedTimeLeft = timeLeft;
-    document.getElementById("buzzButton").disabled = true;
-    document.getElementById("answerInput").style.display = 'inline';
-    document.getElementById("submitAnswer").style.display = 'inline';
-};
+// Function to handle the buzz-in action
+function buzzIn() {
+    const currentQuestion = window.questions[window.currentQuestionIndex];
+    document.getElementById("answer-display").innerText = `Answer: ${currentQuestion.answer}`;
 
-document.getElementById("submitAnswer").onclick = function() {
-    checkAnswer();
-};
-
-function checkAnswer() {
-    const userAnswer = document.getElementById("answerInput").value.trim().toLowerCase();
-    const correctAnswer = questions[currentQuestionIndex].answer.toLowerCase();
-
-    if (userAnswer === correctAnswer) {
-        score++;
-        alert("Correct!");
-    } else {
-        alert("Incorrect! The correct answer was: " + correctAnswer);
-    }
-
-    logAttempt(userAnswer === correctAnswer, userAnswer);
-    document.getElementById("score").innerText = "Score: " + score;
-    document.getElementById("answerInput").value = '';
-    startQuestion();
+    // Hide the buzz button and move to the next question
+    document.getElementById("buzz-button").classList.add("hidden");
+    window.currentQuestionIndex++;
+    setTimeout(showNextQuestion, 3000); // Show the next question after 3 seconds
 }
-
-function logAttempt(isCorrect, userAnswer) {
-    const logEntry = {
-        question: questions[currentQuestionIndex].question,
-        correctAnswer: questions[currentQuestionIndex].answer,
-        userAnswer,
-        result: isCorrect ? "Correct" : "Incorrect",
-        buzzedWord,
-        buzzedTimeLeft,
-        timestamp: new Date().toLocaleString()
-    };
-
-    const log = JSON.parse(localStorage.getItem("quizLog") || "[]");
-    log.push(logEntry);
-    localStorage.setItem("quizLog", JSON.stringify(log));
-}
-
-function viewLog() {
-    const log = JSON.parse(localStorage.getItem("quizLog") || "[]");
-    const logContent = document.getElementById("logContent");
-    logContent.innerHTML = log.length
-        ? log.map(entry => `<p><b>Question:</b> ${entry.question}<br><b>Your Answer:</b> ${entry.userAnswer}<br><b>Result:</b> ${entry.result}<br><b>Correct Answer:</b> ${entry.correctAnswer}<br><b>Buzzed Word:</b> ${entry.buzzedWord}<br><b>Time Left on Buzz:</b> ${entry.buzzedTimeLeft} seconds</p><hr>`).join('')
-        : "<p>No attempts logged yet.</p>";
-
-    document.getElementById("logModal").style.display = "flex";
-}
-
-function closeLog() {
-    document.getElementById("logModal").style.display = "none";
-}
-
-document.getElementById("clearLogButton").onclick = function() {
-    localStorage.removeItem("quizLog");
-    alert("Log cleared.");
-};
-
-function countDown() {
-    if (timeLeft > 0) {
-        timeLeft--;
-        document.getElementById("timeLeft").innerText = timeLeft;
-    } else {
-        clearInterval(intervalId);
-        clearInterval(timerId);
-        alert("Time's up!");
-        startQuestion();
-    }
-}
-
-function resetTimer() {
-    clearInterval(timerId);
-    timeLeft = 30;
-    document.getElementById("timeLeft").innerText = timeLeft;
-}
-
-document.getElementById('modeToggleButton').onclick = function() {
-    document.body.classList.toggle('dark-mode');
-};
