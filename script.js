@@ -21,8 +21,8 @@ function parseAndStartGame() {
     showNextQuestion();
 }
 
+// Function to parse the packet into questions and answers
 function parsePacket(packetText) {
-    // Updated regular expression for matching questions and answers
     const questionPattern = /(\d+)\.\s*(.*?)(?:\s*([A-Z\s/]+))$/g; // Match question number, question, and answer
     const bonusPattern = /B(\d+):\s*(.*?)(?:\s*([A-Z\s/]+))$/g; // Match bonus question number, bonus question, and answer
 
@@ -55,8 +55,7 @@ function parsePacket(packetText) {
     return questions;
 }
 
-
-// Function to show the next question
+// Function to show the next question, word by word
 function showNextQuestion() {
     const currentQuestion = window.questions[window.currentQuestionIndex];
     if (!currentQuestion) {
@@ -64,8 +63,23 @@ function showNextQuestion() {
         return;
     }
 
-    document.getElementById("question-display").innerText = currentQuestion.questionText;
-    document.getElementById("buzz-button").classList.remove("hidden");
+    // Clear previous question text
+    document.getElementById("question-display").innerText = '';
+
+    // Display the question word by word
+    const questionWords = currentQuestion.questionText.split(' ');
+    let wordIndex = 0;
+    const intervalId = setInterval(() => {
+        document.getElementById("question-display").innerText += questionWords[wordIndex] + ' ';
+        wordIndex++;
+        if (wordIndex === questionWords.length) {
+            clearInterval(intervalId); // Stop the interval when all words have been displayed
+            document.getElementById("buzz-button").classList.remove("hidden"); // Show the buzz button
+        }
+    }, 500); // Show each word with a delay of 500ms
+
+    // Display the question type (optional)
+    document.getElementById("question-type").innerText = currentQuestion.type;
 }
 
 // Function to handle the buzz-in action
@@ -76,5 +90,13 @@ function buzzIn() {
     // Hide the buzz button and move to the next question
     document.getElementById("buzz-button").classList.add("hidden");
     window.currentQuestionIndex++;
-    setTimeout(showNextQuestion, 3000); // Show the next question after 3 seconds
+
+    // Wait for 3 seconds before showing the next question
+    setTimeout(() => {
+        if (window.currentQuestionIndex < window.questions.length) {
+            showNextQuestion(); // Show next question
+        } else {
+            alert("Game over! All questions have been answered.");
+        }
+    }, 3000);
 }
